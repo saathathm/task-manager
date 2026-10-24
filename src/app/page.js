@@ -7,13 +7,13 @@ export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
-  function saveTask() {
+  async function saveTask() {
     const value = task.trim();
 
     if (!value) return;
 
     if (editingId !== null) {
-      // UPDATE existing task
+      // Keep editing locally for now
       setTasks(
         tasks.map((item) =>
           item.id === editingId ? { ...item, title: value } : item,
@@ -21,17 +21,34 @@ export default function Home() {
       );
 
       setEditingId(null);
-    } else {
-      // CREATE new task
-      const newTask = {
-        id: crypto.randomUUID(),
-        title: value,
-      };
-
-      setTasks([...tasks, newTask]);
+      setTask("");
+      return;
     }
 
-    setTask("");
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: value }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to create task");
+        return;
+      }
+
+      // Add the task returned by our backend
+      setTasks((previousTasks) => [...previousTasks, data.task]);
+
+      setTask("");
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      alert("Could not connect to the server");
+    }
   }
 
   function editTask(item) {
